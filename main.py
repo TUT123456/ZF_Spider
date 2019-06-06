@@ -190,7 +190,7 @@ class Spider:
             try:
                 Time = td_list[4]['title']
             except KeyError:
-                Time = "网课无选课时间"
+                Time = "网课无课程周期"
             number = td_list[10].string
             lesson = self.Lesson(name, code, teacher_name, Time, number)
             lesson_list.append(lesson)
