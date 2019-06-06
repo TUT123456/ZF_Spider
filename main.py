@@ -189,7 +189,7 @@ class Spider:
             teacher_name = td_list[3].string
             try:
                 Time = td_list[4]['title']
-            except:
+            except KeyError:
                 Time = "网课无选课时间"
             number = td_list[10].string
             lesson = self.Lesson(name, code, teacher_name, Time, number)
