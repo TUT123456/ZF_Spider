@@ -1,5 +1,5 @@
+# -*- coding: utf-8 -*-
 import requests
-from PIL import Image
 from bs4 import BeautifulSoup
 import copy
 import time
@@ -7,6 +7,7 @@ import re
 import os
 import json
 import threading
+from recognizer import recognizer
 
 
 class Spider:
@@ -46,7 +47,6 @@ class Spider:
         self.session = requests.Session()
         self.__now_lessons_number = 0
 
-
     def __set_real_url(self):
         '''
         得到真实的登录地址（无Cookie）
@@ -73,12 +73,10 @@ class Spider:
             request = self.session.get(self.__real_base_url + 'CheckCode.aspx', headers=self.__headers)
         else:
             request = self.session.get(self.__real_base_url + 'CheckCode.aspx?', headers=self.__headers)
-        with open('code.jpg', 'wb')as f:
+        with open('code.png', 'wb')as f:
             f.write(request.content)
-        im = Image.open('code.jpg')
-        im.show()
-        print('Please input the code:')
-        code = input()
+        print('Loading checkcode')
+        code = recognizer.recognize_checkcode('./code.png')
         return code
 
     def __get_login_data(self, uid, password):
@@ -87,6 +85,7 @@ class Spider:
         :param uid: 学号
         :param password: 密码
         :return: 含登录包的data字典
+
         '''
         self.__uid = uid
         request = self.__set_real_url()
@@ -188,7 +187,10 @@ class Spider:
             code = td_list[0].input['name']
             name = td_list[1].string
             teacher_name = td_list[3].string
-            Time = td_list[4]['title']
+            try:
+                Time = td_list[4]['title']
+            except:
+                Time = "网课无选课时间"
             number = td_list[10].string
             lesson = self.Lesson(name, code, teacher_name, Time, number)
             lesson_list.append(lesson)
@@ -221,14 +223,14 @@ class Spider:
                 try:
                     code = lesson.code
                     data[code] = 'on'
-                    request = self.session.post(self.__headers['Referer'], data=data, headers=self.__headers,timeout=5)
+                    request = self.session.post(self.__headers['Referer'], data=data, headers=self.__headers, timeout=5)
                 except:
                     continue
                 start = time.time()
                 soup = BeautifulSoup(request.text, 'lxml')
                 self.__set__VIEWSTATE(soup)
                 error_tag = soup.html.head.script
-                if not error_tag is None:
+                if error_tag is not None:
                     error_tag_text = error_tag.string
                     r = "alert\('(.+?)'\);"
                     for s in re.findall(r, error_tag_text):
@@ -243,7 +245,7 @@ class Spider:
                     print(td.string)
                 print(time.time()-start)
 
-    def run(self,uid,password):
+    def run(self, uid, password):
         '''
         开始运行
         :return: none
@@ -260,16 +262,16 @@ class Spider:
             lesson_list = lesson_list[select_id:select_id + 1]
             thread_list = list()
             for i in range(15):
-                thread_list.append(threading.Thread(target=self.__select_lesson,args=(lesson_list,)))
+                thread_list.append(threading.Thread(target=self.__select_lesson, args=(lesson_list,)))
             for i in range(15):
                 thread_list[i].start()
-            for i in range(15):  
+            for i in range(15):
                 thread_list[i].join()
 
 
 if __name__ == '__main__':
     print('尝试登录...')
-    with open('config.json',encoding='utf-8')as f:
+    with open('config.json', encoding='utf-8')as f:
         config = json.load(f)
     url = config['url']
     uid = config['student_number']
