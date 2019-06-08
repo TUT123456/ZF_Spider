@@ -139,7 +139,7 @@ class Spider:
                 print('欢迎' + self.__name)
                 self.__enter_lessons_first()
                 return True
-            except:
+            except Exception:
                 print('未知错误，尝试再次登录')
                 time.sleep(0.5)
                 continue
@@ -166,7 +166,7 @@ class Spider:
         try:
             xq_tag = soup.find('select', id='ddl_xqbs')
             self.__base_data['ddl_xqbs'] = xq_tag.find('option')['value']
-        except:
+        except Exception:
             pass
 
     def __set__VIEWSTATE(self, soup):
@@ -224,15 +224,14 @@ class Spider:
                     code = lesson.code
                     data[code] = 'on'
                     request = self.session.post(self.__headers['Referer'], data=data, headers=self.__headers, timeout=5)
-                except:
+                except Exception:
                     continue
-                start = time.time()
                 soup = BeautifulSoup(request.text, 'lxml')
                 self.__set__VIEWSTATE(soup)
                 error_tag = soup.html.head.script
                 if error_tag is not None:
                     error_tag_text = error_tag.string
-                    r = "alert\('(.+?)'\);"
+                    r = r"alert\('(.+?)'\);"
                     for s in re.findall(r, error_tag_text):
                         print(s)
                 print('已成功选到的课程:')
@@ -243,7 +242,6 @@ class Spider:
                 for tr in tr_list:
                     td = tr.find('td')
                     print(td.string)
-                print(time.time()-start)
 
     def run(self, uid, password):
         '''
