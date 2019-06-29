@@ -88,7 +88,7 @@ class Spider:
         fb.close()
         os.remove(img_name)
         res = json.loads(r.text)
-        code = res['value'] 
+        code = res['value']
         return code
 
     def __get_login_data(self, uid, password):
@@ -254,7 +254,7 @@ class Spider:
                 for tr in tr_list:
                     td = tr.find('td')
                     print(td.string)
-                now = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+                now = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
                 print("当前时间为: " + now)
 
     def run(self, uid, password, thread_num):
