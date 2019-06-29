@@ -5,9 +5,10 @@ import copy
 import time
 import re
 import os
+import random
+import string
 import json
 import threading
-from recognizer import recognizer
 
 
 class Spider:
@@ -23,10 +24,11 @@ class Spider:
         def show(self):
             print('  name:' + self.name + '  code:' + self.code + '  teacher_name:' + self.teacher_name + '  time:' + self.time)
 
-    def __init__(self, url):
+    def __init__(self, url, verify_api_url):
         self.__uid = ''
         self.__real_base_url = ''
         self.__base_url = url
+        self.__verify_api = verify_api_url
         self.__name = ''
         self.__base_data = {
             '__EVENTTARGET': '',
@@ -73,10 +75,20 @@ class Spider:
             request = self.session.get(self.__real_base_url + 'CheckCode.aspx', headers=self.__headers)
         else:
             request = self.session.get(self.__real_base_url + 'CheckCode.aspx?', headers=self.__headers)
-        with open('code.png', 'wb')as f:
+        ran_str = ''.join(random.sample(string.ascii_letters + string.digits, 16))
+        img_name = ran_str + '.png'
+        with open(img_name, 'wb')as f:
             f.write(request.content)
+        f.close()
         print('Loading checkcode')
-        code = recognizer.recognize_checkcode('./code.png')
+        api_url = self.__verify_api
+        fb = open(img_name, 'rb')
+        files = {'image_file': (img_name, fb, 'application')}
+        r = requests.post(url=api_url, files=files)
+        fb.close()
+        os.remove(img_name)
+        res = json.loads(r.text)
+        code = res['value'] 
         return code
 
     def __get_login_data(self, uid, password):
@@ -242,8 +254,10 @@ class Spider:
                 for tr in tr_list:
                     td = tr.find('td')
                     print(td.string)
+                now = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+                print("当前时间为: " + now)
 
-    def run(self, uid, password):
+    def run(self, uid, password, thread_num):
         '''
         开始运行
         :return: none
@@ -259,11 +273,11 @@ class Spider:
             select_id = int(input())
             lesson_list = lesson_list[select_id:select_id + 1]
             thread_list = list()
-            for i in range(15):
+            for i in range(thread_num):
                 thread_list.append(threading.Thread(target=self.__select_lesson, args=(lesson_list,)))
-            for i in range(15):
+            for i in range(thread_num):
                 thread_list[i].start()
-            for i in range(15):
+            for i in range(thread_num):
                 thread_list[i].join()
 
 
@@ -274,6 +288,8 @@ if __name__ == '__main__':
     url = config['url']
     uid = config['student_number']
     password = config['password']
-    spider = Spider(url)
-    spider.run(uid, password)
+    thread_num = int(config['thread'])
+    verify_api_url = config['verify_api_url']
+    spider = Spider(url, verify_api_url)
+    spider.run(uid, password, thread_num)
     os.system("pause")

@@ -1,5 +1,7 @@
 {
-    "url":"",
+    "url":"http://210.34.84.1:80",
+    "verify_api_url":"http://127.0.0.1:6000/b",
     "student_number":"",
-    "password":""
+    "password":"",
+    "thread":"8"
 }
