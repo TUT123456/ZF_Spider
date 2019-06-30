@@ -245,6 +245,10 @@ class Spider:
                     error_tag_text = error_tag.string
                     r = r"alert\('(.+?)'\);"
                     for s in re.findall(r, error_tag_text):
+                        if s == "该门课程已选！！":
+                            Whether_Break = True
+                        else:
+                            Whether_Break = False
                         print(s)
                 print('已成功选到的课程:')
                 selected_lessons_pre_tag = soup.find('legend', text='已选课程')
@@ -256,6 +260,8 @@ class Spider:
                     print(td.string)
                 now = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
                 print("当前时间为: " + now)
+            if Whether_Break is True:
+                break
 
     def run(self, uid, password, thread_num):
         '''
