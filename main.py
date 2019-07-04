@@ -48,6 +48,11 @@ class Spider:
         }
         self.session = requests.Session()
         self.__now_lessons_number = 0
+        self.__target_lesson = ''
+        self.__selected_lesson = []
+        self.__frequency = 0
+        self.__lock = threading.RLock()
+        self.__message_box = ''
 
     def __set_real_url(self):
         '''
@@ -245,22 +250,25 @@ class Spider:
                     error_tag_text = error_tag.string
                     r = r"alert\('(.+?)'\);"
                     for s in re.findall(r, error_tag_text):
-                        if s == "该门课程已选！！":
-                            Whether_Break = True
-                        else:
-                            Whether_Break = False
-                        print(s)
-                print('已成功选到的课程:')
+                        self.__message_box = s
                 selected_lessons_pre_tag = soup.find('legend', text='已选课程')
                 selected_lessons_tag = selected_lessons_pre_tag.next_sibling
                 tr_list = selected_lessons_tag.find_all('tr')[1:]
                 self.__now_lessons_number = len(tr_list)
-                for tr in tr_list:
-                    td = tr.find('td')
-                    print(td.string)
-                now = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-                print("当前时间为: " + now)
-            if Whether_Break is True:
+                self.__lock.acquire()
+                try:
+                    for tr in tr_list:
+                        td = tr.find('td')
+                        if td in self.__selected_lesson:
+                            pass
+                        else:
+                            self.__selected_lesson.append(td)
+                    self.__frequency += 1
+                    if self.__message_box == "该门课程已选！！":
+                        self.__frequency = -1
+                finally:
+                    self.__lock.release()
+            if self.__frequency == -1:
                 break
 
     def run(self, uid, password, thread_num):
@@ -278,13 +286,61 @@ class Spider:
                 lesson_list[i].show()
             select_id = int(input())
             lesson_list = lesson_list[select_id:select_id + 1]
+            self.__target_lesson = lesson_list[0].name
             thread_list = list()
             for i in range(thread_num):
                 thread_list.append(threading.Thread(target=self.__select_lesson, args=(lesson_list,)))
-            for i in range(thread_num):
+            thread_list.append(threading.Thread(target=self.status_table, args=()))
+            for i in range(thread_num+1):
                 thread_list[i].start()
-            for i in range(thread_num):
+            for i in range(thread_num+1):
                 thread_list[i].join()
+
+    def status_table(self):
+        while True:
+            selected_lesson = self.__selected_lesson
+            title = "已选课程："
+            status = "当前状态：" + "正在抢" + self.__target_lesson
+            message = self.__message_box
+            # 创建一个25*9的列表
+            table = [[[] for i in range(25)] for j in range(10)]
+            for i in range(0, 10, 2):
+                table[i][0] = '+'
+                table[i][-1] = '+'
+                for j in range(1, 24):
+                    table[i][j] = '--'
+            for i in range(1, 9, 2):
+                table[i][0] = '|'
+                table[i][-1] = '|'
+            for i in range(len(title)):
+                table[1][10+i] = title[i]
+            for i in range(len(selected_lesson)):
+                for j in range(len(selected_lesson[i].text)):
+                    table[3+(2*i)][2+j] = selected_lesson[i].text[j]
+            for i in range(len(status)):
+                table[-3][1+i] = status[i]
+            if self.__frequency == -1:
+                frequency = "抢课完成"
+            else:
+                frequency = message + "已经抢了 " + str(self.__frequency) + "次"
+            for i in range(len(frequency)):
+                table[-1][i] = frequency[i]
+            # 列表的个数
+            y = len(table)
+            # 列表中元素的个数
+            x = len(table[0])
+            # 创建一个字符串构成的表格
+            table_string = ''
+            for i in range(y):
+                for j in range(x):
+                    if table[i][j]:
+                        table_string += str(table[i][j])
+                    else:
+                        table_string += '  '
+                table_string += '\n'
+            os.system('cls')
+            print(table_string, end='')
+            time.sleep(3)
 
 
 if __name__ == '__main__':
